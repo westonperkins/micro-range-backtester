@@ -58,8 +58,8 @@ def main():
     ap.add_argument("--data_dir", default="data")
     ap.add_argument("--out_dir", default="output")
     ap.add_argument("--lookback", type=int, default=30)
-    ap.add_argument("--band_pct", type=float, default=3.0)      # percent
-    ap.add_argument("--fluct_pct", type=float, default=5.0)     # percent
+    ap.add_argument("--band_pct", type=float, default=3.0)  # percent
+    ap.add_argument("--fluct_pct", type=float, default=5.0)  # percent
     ap.add_argument("--min_hit_rate", type=float, default=0.15)
     ap.add_argument("--n_names", type=int, default=10)
     args = ap.parse_args()
@@ -68,7 +68,9 @@ def main():
     fluct = args.fluct_pct / 100.0
 
     cand_path = os.path.join(args.out_dir, "daily_candidates.csv")
-    stats_path = os.path.join(args.out_dir, "screener_stats_all.csv")  # not strictly needed now
+    stats_path = os.path.join(
+        args.out_dir, "screener_stats_all.csv"
+    )  # not strictly needed now
     trades_path = os.path.join(args.out_dir, "trades.csv")
 
     if not os.path.exists(cand_path):
@@ -80,7 +82,9 @@ def main():
     if os.path.exists(trades_path) and os.path.getsize(trades_path) > 0:
         trades = pd.read_csv(trades_path, parse_dates=["date"])
     else:
-        trades = pd.DataFrame(columns=["date", "ticker", "side", "price", "qty", "reason", "pnl"])
+        trades = pd.DataFrame(
+            columns=["date", "ticker", "side", "price", "qty", "reason", "pnl"]
+        )
 
     frames = load_all_data(args.data_dir)
 
@@ -118,9 +122,9 @@ def main():
         exp_hit_ok = (hit_rate >= args.min_hit_rate).fillna(False)
 
         # comparisons
-        sub["price_ok_match"] = (sub["price_ok"].astype(bool) == exp_price_ok)
-        sub["vol_ok_match"] = (sub["vol_ok"].astype(bool) == exp_vol_ok)
-        sub["entry_signal_match"] = (sub["entry_signal"].astype(bool) == exp_entry_signal)
+        sub["price_ok_match"] = sub["price_ok"].astype(bool) == exp_price_ok
+        sub["vol_ok_match"] = sub["vol_ok"].astype(bool) == exp_vol_ok
+        sub["entry_signal_match"] = sub["entry_signal"].astype(bool) == exp_entry_signal
 
         sub["selected_gate_match"] = (~sub["selected"].astype(bool)) | (
             exp_price_ok & exp_vol_ok & exp_hit_ok & exp_entry_signal
@@ -137,15 +141,21 @@ def main():
     # per-date selection sanity
     grp = chk.groupby("date")
     per_date = grp.apply(
-        lambda g: pd.Series({
-            "selected_count": int(g["selected"].sum()),
-            "eligible_count": int(((g["price_ok"]) & (g["vol_ok"]) &
-                                (pick_col(g, "hit_rate") >= args.min_hit_rate) &
-                                (g["entry_signal"])).sum())
-        }),
-        include_groups=False  # future-proof pandas behavior
+        lambda g: pd.Series(
+            {
+                "selected_count": int(g["selected"].sum()),
+                "eligible_count": int(
+                    (
+                        (g["price_ok"])
+                        & (g["vol_ok"])
+                        & (pick_col(g, "hit_rate") >= args.min_hit_rate)
+                        & (g["entry_signal"])
+                    ).sum()
+                ),
+            }
+        ),
+        include_groups=False,  # future-proof pandas behavior
     ).reset_index()
-
 
     problems = {
         "price_ok_mismatch": chk[~chk["price_ok_match"]],
